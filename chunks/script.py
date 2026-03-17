@@ -16,16 +16,13 @@ class PreciseChunker:
         self.folder_path = Path(folder_path)
 
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=300,
-            chunk_overlap=50,
+            chunk_size=600,
+            chunk_overlap=100,
             length_function=count_words,
             separators=["\n\n", "\n", ". ", "! ", "? ", ", ", " "],
             add_start_index=True
         )
 
-        print("🔄 Загрузка all-MiniLM-L6-v2...")
-        self.model = SentenceTransformer('all-MiniLM-L6-v2')
-        print("✅ Готово!")
         self.final_chunks = []
 
     def load_documents(self):
@@ -73,7 +70,6 @@ class PreciseChunker:
         print("✂️  RecursiveCharacterTextSplitter...")
         all_chunks = self.splitter.split_documents(docs)
 
-        self.final_chunks = []
         for chunk in all_chunks:
             word_count = count_words(chunk.page_content)
 
