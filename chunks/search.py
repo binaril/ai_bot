@@ -12,8 +12,8 @@ collection = client.get_collection("documents")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Запрос → эмбеддинг → поиск
-query = "Енуроф владыка цепи"
-query_emb = model.encode([query])  # ← 384 dim
+query = "Веронайз Трибри Фил Веронайз (Фил) Трибри"
+query_emb = model.encode([query], normalize_embeddings=True)
 
 # 🔥 query_embeddings
 results = collection.query(

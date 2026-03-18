@@ -16,8 +16,8 @@ class PreciseChunker:
         self.folder_path = Path(folder_path)
 
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=600,
-            chunk_overlap=100,
+            chunk_size=100,
+            chunk_overlap=10,
             length_function=count_words,
             separators=["\n\n", "\n", ". ", "! ", "? ", ", ", " "],
             add_start_index=True

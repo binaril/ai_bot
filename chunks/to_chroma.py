@@ -86,7 +86,7 @@ class ChromaIndexer:
         print("\n🔍 ТЕСТ ПОИСКА:")
 
         model = SentenceTransformer('all-MiniLM-L6-v2')
-        queries = ["асинхронный контроллер", "middleware", "OpenTelemetry"]
+        queries = ["Креньюман", "Горомот", "Керамо Тренкинс ― выдающийся Джухат"]
 
         for query in queries:
             query_emb = model.encode([query])  # ✅ Плоский список
