@@ -70,7 +70,7 @@ class QwenRAGBot:
             task = progress.add_task("Генерирую ответ...", total=None)
             try:
                 response = requests.post(f"{OLLAMA_URL}/api/generate",
-                                         json=payload, stream=True, timeout=60)
+                                         json=payload, stream=True, timeout=300)
                 full_response = ""
                 for line in response.iter_lines():
                     if line:
@@ -118,7 +118,7 @@ class QwenRAGBot:
                 console.print(f"\n🔍 Ищу: [italic]{query}[/italic]")
 
                 # Поиск
-                top_docs = self.search(query, n_results=10)
+                top_docs = self.search(query, n_results=5)
 
                 # Таблица результатов
                 table = Table(title="Топ документы")
@@ -136,7 +136,7 @@ class QwenRAGBot:
                 console.print(table)
 
                 # LLM запрос
-                full_context = "\n".join(context[:5])  # Топ-3
+                full_context = "\n".join(context[:5])  # Топ-5
                 console.rule("🤖 Qwen 2.5 ответ")
 
                 answer = self.ollama_chat(full_context, query)

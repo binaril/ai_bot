@@ -1,8 +1,8 @@
 {
-  "total_chunks_original": 743,
-  "total_embeddings": 706,
+  "total_chunks_original": 145,
+  "total_embeddings": 138,
   "embedding_dimension": 384,
   "model_name": "all-MiniLM-L6-v2",
-  "avg_chunk_words": 65.68102288021534,
+  "avg_chunk_words": 91.50344827586207,
   "files": 31
 }
