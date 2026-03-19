@@ -3,7 +3,6 @@ import re
 from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
-from sentence_transformers import SentenceTransformer
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -114,7 +113,6 @@ class PreciseChunker:
 if __name__ == "__main__":
     import numpy as np
 
-    # 🎯 ТОЧНО 100-300 слов
     chunker = PreciseChunker("./knowledge_base")
     chunker.process_folder()
     chunker.save_chunks()

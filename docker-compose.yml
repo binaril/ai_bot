@@ -1,5 +1,23 @@
 ﻿version: '3.8'
 services:
+  api:
+    build: ./app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - chromadb
+      - ollama
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMOUS_USAGE_TELEMETRY=FALSE
+    restart: unless-stopped
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -10,3 +28,4 @@ services:
     restart: unless-stopped
 volumes:
   ollama_data:
+  chroma-data:

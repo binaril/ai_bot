@@ -106,20 +106,6 @@ class ChunkEmbedder:
             json.dump(self.embeddings.tolist(), f)
         print(f"   🔢 {embeddings_json.name}")
 
-        # 4. Статистика
-        stats = {
-            'total_chunks_original': len(self.chunks),
-            'total_embeddings': len(self.embeddings),
-            'embedding_dimension': self.embeddings.shape[1],
-            'model_name': 'all-MiniLM-L6-v2',
-            'avg_chunk_words': np.mean([c.get('word_count', 0) for c in self.chunks]),
-            'files': len(set(c.get('filename', '') for c in self.chunks))
-        }
-        stats_file = self.output_dir / "stats.json"
-        with open(stats_file, 'w') as f:
-            json.dump(stats, f, indent=2)
-        print(f"   📈 {stats_file.name}")
-
     def run(self):
         """Полный пайплайн"""
         print("🤖 JSON ЧАНКИ → ЭМБЕДДИНГИ")

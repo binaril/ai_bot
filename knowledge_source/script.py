@@ -1,7 +1,6 @@
 ﻿#!/usr/bin/env python3
 """
 ПРОСТОЙ скрипт замены слов из terms_map.json
-input/ → output/
 """
 
 import json

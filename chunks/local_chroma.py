@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env python3
 """
-Эмбеддинги → Chroma (ФИНАЛЬНАЯ версия — все ошибки исправлены)
+Эмбеддинги → Chroma
 """
 
 import json
@@ -34,7 +34,7 @@ class ChromaIndexer:
         return embeddings, metadata
 
     def create_chroma_index(self, collection_name: str = "documents"):
-        """✅ ФИНАЛЬНАЯ версия — без ошибок"""
+
         print(f"\n🔗 Коллекция '{collection_name}'...")
 
         client = chromadb.PersistentClient(path=str(self.chroma_path))
