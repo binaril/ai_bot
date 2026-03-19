@@ -1,11 +1,15 @@
 ﻿from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
+import logging
 import chromadb
 import requests
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.cross_encoder import CrossEncoder
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="RAG API", version="1.0")
 
@@ -33,7 +37,7 @@ class AddDocRequest(BaseModel):
 
 def get_embedding(text: str) -> List[float]:
     """Генерация эмбеддинга"""
-    return embedder.encode(text).tolist()
+    return embedder.encode(text, normalize_embeddings=True).tolist()
 
 
 def query_ollama(context: str, query: str) -> str:
@@ -41,20 +45,15 @@ def query_ollama(context: str, query: str) -> str:
 
     few_shot_examples = f"""Пример 1:
         Вопрос: Кто такой Горомот?
-        Контекст: Горомот Горомот - Третий и последний в истории Надземья человек, вступивший в брак с Ильтийской девой — его женой и королевой стала Арвен Ундомиэль, дочь Зуронга Полуэльфа
-        Ответ: Горомот это третий и последний в истории Надземья человек, вступивший в брак с Ильтийской девой — его женой и королевой стала Арвен Ундомиэль, дочь Зуронга Полуэльфа
+        Ответ: Горомот это третий и последний в истории Надземья человек
 
         Пример 2:
         Вопрос: Кто такой Пипин
-        Контекст: Кинанир Бок Кинанир (Пипин) Бок — Джухат из Тиса, друг и соратник Керамо Тренкинса и один из девяти членов Братства цепи, впоследствии — 32-й тан Тиса. Он был самым младшим из четверых Джухатов, присоединившихся к Керамо в его походе.
-        Ответ: Кинанир Бок или Пипин - Джухат из Тиса, друг и соратник Керамо Тренкинса и один из девяти членов Братства цепи, впоследствии — 32-й тан Тиса. Он был самым младшим из четверых Джухатов, присоединившихся к Керамо в его походе.
+        Ответ: Кинанир Бок или Пипин - Джухат из Тиса, друг и соратник Керамо Тренкинса
 
         Пример 3:
         Вопрос: Какой народ являятся маленький и незаметный?
-        Контекст: Джухаты
-Джухаты — маленький и незаметный, но очень древний народец. Полуросликами, или невысокликами, их прозвали люди из-за маленького роста (около 120 см), хотя сами Джухаты никогда себя так не называли.
-
-        Ответ: Речь идет о Джухатах, маленький и незаметный, но очень древний народец. Полуросликами, или невысокликами, их прозвали люди из-за маленького роста (около 120 см), хотя сами Джухаты никогда себя так не называли.
+        Ответ: Джухаты
         """
 
     prompt = f"""
@@ -90,13 +89,23 @@ def query_ollama(context: str, query: str) -> str:
 
 def search(query: str, n_results: int = 10) -> list:
     """Retrieval + Reranking"""
+    emb_query = query.lower()
+    emb_query = emb_query.replace("что","")
+    emb_query = emb_query.replace("кто","")
+    emb_query = emb_query.replace("такая","")
+    emb_query = emb_query.replace("такие","")
+    emb_query = emb_query.replace("такой","")
+    emb_query = emb_query.replace("такое","")
+
+    logger.info(f"db query: {emb_query}")
     results = collection.query(
-        query_embeddings=embedder.encode(query).tolist(),
-        n_results=10,
+        query_embeddings=embedder.encode([emb_query], normalize_embeddings=True).tolist(),
+        n_results=50,
         include=['documents', 'metadatas', 'distances']
     )
 
     docs = results['documents'][0]
+
     pairs = [[query, doc] for doc in docs]
     scores = reranker.predict(pairs)
 
@@ -109,30 +118,27 @@ def search(query: str, n_results: int = 10) -> list:
 async def rag_search(req: QueryRequest) -> dict:
     """RAG поиск"""
     # Поиск похожих документов
-    query_embedding = get_embedding(req.query)
+    query_embedding = embedder.encode(req.query, normalize_embeddings=True).tolist()
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=req.n_results
     )
     top_docs = search(req.query, 10)
 
+    logger.info(f"🔍 len results: {len(top_docs)}")
+
     context = []
     for score, doc, meta in top_docs:
         filename = meta.get('filename', 'unknown')
         context.append(f"Файл: {filename}\n{doc}\n")
-    full_context = "\n".join(context[:3])  # Топ-5
+    full_context = "\n".join(context[:7])  # Топ-5
 
     # Генерация ответа через Ollama
     answer = query_ollama(full_context, req.query)
 
     return {
         "query": req.query,
-        "answer": answer,
-        "sources": [
-            {"id": id_, "snippet": doc[:200] + "..." if len(doc) > 200 else doc}
-            for id_, doc in zip(results['ids'][0], results['documents'][0])
-        ],
-        "distances": results['distances'][0]
+        "answer": answer
     }
 
 

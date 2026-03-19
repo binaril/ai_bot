@@ -3,7 +3,7 @@ services:
   api:
     build: ./app
     ports:
-      - "8080:8080"
+      - "8040:8040"
     depends_on:
       - chromadb
       - ollama
