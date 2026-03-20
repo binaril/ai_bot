@@ -130,7 +130,7 @@ python chunks\local_chroma.py
 
 Создание индекса в docker контейнере ChromaDB:
 ```bash
-python chunks\app_chroma.py -c localhost -p 8080
+python chunks\app_chroma.py -c localhost -p 8000
 ```
 Результат - индекс создан в volume (при запущеном контейнере, см. запуск docker compose)
 
@@ -227,6 +227,12 @@ docker compose up -d
 
 ```bash
 docker exec -it ollama ollama run qwen2.5:7b-instruct
+```
+
+Инициализация векторной базы данных
+
+```bash
+python chunks\app_chroma.py -c localhost -p 8000
 ```
 
 ### Примеры запросов и ответов
