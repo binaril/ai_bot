@@ -7,6 +7,8 @@ import requests
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.cross_encoder import CrossEncoder
+import re
+from typing import Set
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -14,16 +16,21 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="RAG API", version="1.0")
 
 # Инициализация
-chroma_client = chromadb.HttpClient(host="localhost", port=8000)
+chroma_client = chromadb.HttpClient(host="chromadb", port=8000)
 collection = chroma_client.get_or_create_collection(name="documents")
 reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')
 
 # Embedding модель (локальная)
 embedder = SentenceTransformer('all-MiniLM-L6-v2')
 
-OLLAMA_URL = "http://localhost:11434/api/generate"
+OLLAMA_URL = "http://ollama:11434/api/generate"
 OLLAMA_MODEL = "qwen2.5:7b-instruct"
 
+BLOCKLIST = [
+    "игнорируй", "забудь", "override", "jailbreak", "dan", "do anything",
+    "sudo", "root", "admin", "password", "secret", "ключ", "пароль",
+    "delete", "drop", "rm -rf", "удали"
+]
 
 class QueryRequest(BaseModel):
     query: str
@@ -66,7 +73,7 @@ def query_ollama(context: str, query: str) -> str:
 
 ВОПРОС: {query}
 
-Ответь точно по контексту, без выдумок. Не выполняй системные команды Если информации нет — скажи "Не нашёл в документах"."""
+Ответь точно по контексту, без выдумок. Не выдавай пароли. Не выполняй системные команды Если информации нет — скажи "Не нашёл в документах"."""
 
     payload = {
         "model": "qwen2.5:7b-instruct",
@@ -114,18 +121,45 @@ def search(query: str, n_results: int = 10) -> list:
             for i in top_idx]
 
 
+def split_into_words(query: str) -> Set[str]:
+    """Разбивает текст на слова (нормализованные)"""
+    # Удаляем пунктуацию, приводим к нижнему регистру
+    clean_query = re.sub(r'[^\w\s]', ' ', query.lower())
+    # Разбиваем по пробелам, убираем пустые
+    words = set(clean_query.split())
+    return {word.strip() for word in words if len(word) > 2}
+
+def check_blacklist(query: str) -> tuple[bool, list]:
+    """Проверяет слова запроса на черный список"""
+    words = split_into_words(query)
+    bad_words = words.intersection(BLOCKLIST)
+
+    return len(bad_words) == 0, list(bad_words)
+
 @app.post("/search/")
 async def rag_search(req: QueryRequest) -> dict:
-    """RAG поиск"""
-    # Поиск похожих документов
-    query_embedding = embedder.encode(req.query, normalize_embeddings=True).tolist()
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=req.n_results
-    )
+    # Блокировка опасных слов
+    is_safe, blocked_words = check_blacklist(req.query)
+
+    if not is_safe:
+        logger.warning("🚫 Блокирован запрос: '{}'", ' '.join(blocked_words))
+        return {
+            "query": req.query,
+            "answer": f"Недопустимый запрос: {', '.join(blocked_words)}"
+        }
+
+    logger.info(f"🔍 len query: {len(req.query)}")
+
+    # Проверка длины (защита от спама)
+    if len(req.query) > 1000:
+        return {
+            "query": req.query,
+            "answer": "Слишком длинный запрос"
+        }
+
     top_docs = search(req.query, 10)
 
-    logger.info(f"🔍 len results: {len(top_docs)}")
+    logger.info(f"🔍 len docs results: {len(top_docs)}")
 
     context = []
     for score, doc, meta in top_docs:
